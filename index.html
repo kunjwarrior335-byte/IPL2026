@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPL 2024 Chase Simulator - Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #0f172a;      
+            --bg-card: #1e293b;      
+            --text-primary: #f8fafc;  
+            --text-secondary: #94a3b8; 
+            --safe-green: #22c55e;
+            --agg-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --orange-strike: #fb923c;
+            --border: #334155;       
+        }
+
+        * { box-sizing: border-box; font-family: 'Roboto', sans-serif; margin: 0; padding: 0; }
+        body { background-color: var(--bg-body); color: var(--text-primary); padding: 20px; }
+
+        /* Setup Screen */
+        #setup-screen { display: flex; flex-direction: column; align-items: center; padding-top: 40px; }
+        .setup-card { background: var(--bg-card); padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 100%; max-width: 600px; text-align: center; border: 1px solid var(--border); }
+        .setup-card h2 { margin-bottom: 20px; color: var(--accent-blue); letter-spacing: 1px; }
+        
+        .team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
+        .team-btn { border: 1px solid var(--border); background: #0f172a; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 700; color: var(--text-primary); transition: 0.2s; }
+        .team-btn:hover { background: var(--accent-blue); color: white; border-color: var(--accent-blue); transform: translateY(-2px); }
+
+        /* Game Layout */
+        #game-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1100px; margin: 0 auto; }
+        .panel { background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); flex: 1; min-width: 350px; border: 1px solid var(--border); }
+
+        /* Left Panel Stats */
+        .header-stats { display: flex; justify-content: space-between; margin-bottom: 20px; text-align: center; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; }
+        .stat-box { flex: 1; }
+        .stat-label { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+        .stat-val { font-size: 1.4rem; font-weight: 900; color: var(--accent-blue); }
+        
+        .score-display { display: flex; align-items: center; gap: 15px; margin: 20px 0; }
+        .main-score { font-size: 3.5rem; font-weight: 900; color: #fff; }
+        .overs-pill { background: #334155; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; color: #cbd5e1; }
+        .last-ball { width: 65px; height: 65px; border-radius: 50%; border: 4px solid var(--border); background: #0f172a; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 900; margin-left: auto; }
+
+        /* Progress Bar */
+        .prob-wrapper { margin-bottom: 25px; }
+        .prob-bar-bg { height: 10px; background: #334155; border-radius: 5px; overflow: hidden; margin-top: 8px; }
+        .prob-bar-fill { height: 100%; background: linear-gradient(90deg, var(--agg-red), #eab308, var(--safe-green)); width: 50%; transition: 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th { text-align: left; color: var(--text-secondary); padding: 10px 8px; border-bottom: 1px solid var(--border); font-size: 0.75rem; text-transform: uppercase; }
+        td { padding: 12px 8px; border-bottom: 1px solid var(--border); color: #e2e8f0; }
+        .striker-row { background: rgba(34, 197, 94, 0.1); }
+        .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+        .dot-green { background: var(--safe-green); box-shadow: 0 0 8px var(--safe-green); }
+
+        /* Controls */
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
+        .btn { border: none; padding: 18px; border-radius: 10px; cursor: pointer; font-weight: 900; color: white; transition: 0.2s; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-safe { background: var(--safe-green); box-shadow: 0 4px 0 #15803d; }
+        .btn-agg { background: var(--agg-red); box-shadow: 0 4px 0 #b91c1c; }
+        .btn:active { transform: translateY(2px); box-shadow: none; }
+
+        .hidden { display: none !important; }
+        #result-overlay { text-align: center; padding: 30px 20px; }
+        #selection-overlay { text-align: center; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px dashed var(--accent-blue); margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div id="setup-screen">
+    <div class="setup-card">
+        <h2>IPL CHASE SIMULATOR</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">Select Opponent to Start Chasing</p>
+        <div id="team-buttons" class="team-grid"></div>
+    </div>
+</div>
+
+<div id="game-container" class="hidden">
+    <div class="panel">
+        <div class="header-stats">
+            <div class="stat-box"><div class="stat-label">Target</div><div class="stat-val" id="target-val">0</div></div>
+            <div class="stat-box"><div class="stat-label">CRR</div><div class="stat-val" id="crr-val">0</div></div>
+            <div class="stat-box"><div class="stat-label">RRR</div><div class="stat-val" id="rrr-val">0</div></div>
+        </div>
+
+        <div class="prob-wrapper">
+            <div style="display:flex; justify-content:space-between; font-size: 0.8rem; font-weight:700;">
+                WIN PROBABILITY <span id="prob-txt">50%</span>
+            </div>
+            <div class="prob-bar-bg"><div id="prob-fill" class="prob-bar-fill"></div></div>
+        </div>
+
+        <div class="score-display">
+            <div class="main-score"><span id="runs">0</span>/<span id="wickets">0</span></div>
+            <div class="overs-pill">OVERS <span id="overs">0.0</span></div>
+            <div id="last-ball" class="last-ball">-</div>
+        </div>
+
+        <div class="minicard">
+            <table>
+                <thead><tr><th>BATSMAN</th><th>R</th><th>B</th><th>SR</th></tr></thead>
+                <tbody id="batsmen-body"></tbody>
+            </table>
+            <table style="margin-top: 20px;">
+                <thead><tr><th>BOWLER</th><th>O</th><th>R</th><th>W</th><th>ECO</th></tr></thead>
+                <tbody id="bowler-body"></tbody>
+            </table>
+        </div>
+
+        <div class="controls" id="action-btns">
+            <button class="btn btn-safe" onclick="playBall('S')">SAFE</button>
+            <button class="btn btn-agg" onclick="playBall('A')">AGGRESSIVE</button>
+        </div>
+
+        <div id="selection-overlay" class="hidden">
+            <h3 style="color: var(--accent-blue); margin-bottom: 15px;">WICKET FALLEN! PICK NEXT PLAYER</h3>
+            <div id="available-players" class="team-grid"></div>
+        </div>
+
+        <div id="result-overlay" class="hidden">
+            <h1 id="result-msg"></h1>
+            <button class="btn" style="background: var(--accent-blue); margin-top:10px;" onclick="location.reload()">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <div class="panel" style="max-width: 400px;">
+        <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 10px;">MATCH SCORECARD</h3>
+        <table>
+            <thead><tr><th>PLAYER</th><th>R</th><th>B</th><th>4s</th><th>6s</th></tr></thead>
+            <tbody id="full-scorecard"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const DATA = {
+    "CSK": ["R. Gaikwad", "R. Ravindra", "A. Rahane", "D. Mitchell", "S. Dube", "R. Jadeja", "MS Dhoni", "S. Thakur", "D. Chahar", "T. Deshpande", "M. Pathirana"],
+    "MI": ["I. Kishan", "R. Sharma", "S. Yadav", "H. Pandya", "T. David", "R. Shepherd", "N. Tilak Varma", "G. Coetzee", "J. Bumrah", "P. Chawla", "A. Madhwal"],
+    "RCB": ["F. du Plessis", "V. Kohli", "R. Patidar", "G. Maxwell", "C. Green", "D. Karthik", "M. Lomror", "K. Sharma", "M. Siraj", "Y. Dayal", "R. Topley"],
+    "KKR": ["P. Salt", "S. Narine", "A. Raghuvanshi", "S. Iyer", "V. Iyer", "R. Singh", "A. Russell", "R. Singh", "M. Starc", "V. Chakravarthy", "H. Rana"],
+    "SRH": ["T. Head", "A. Sharma", "A. Markram", "H. Klaasen", "N. Reddy", "A. Samad", "S. Ahmed", "P. Cummins", "B. Kumar", "M. Markande", "T. Natarajan"],
+    "RR": ["Y. Jaiswal", "J. Buttler", "S. Samson", "R. Parag", "D. Jurel", "S. Hetmyer", "R. Ashwin", "T. Boult", "A. Khan", "Y. Chahal", "S. Sharma"],
+    "GT": ["S. Gill", "W. Saha", "S. Sudharsan", "D. Miller", "A. Omarzai", "R. Tewatia", "R. Khan", "U. Yadav", "S. Johnson", "M. Sharma", "N. Ahmad"],
+    "LSG": ["K.L. Rahul", "Q. de Kock", "D. Padikkal", "N. Pooran", "M. Stoinis", "A. Badoni", "K. Pandya", "R. Bishnoi", "M. Khan", "M. Yadav", "N. ul-Haq"],
+    "DC": ["D. Warner", "P. Shaw", "J. Fraser-McGurk", "R. Pant", "T. Stubbs", "A. Porel", "A. Patel", "K. Yadav", "I. Sharma", "K. Ahmed", "M. Kumar"],
+    "PBKS": ["S. Dhawan", "J. Bairstow", "P. Singh", "S. Curran", "L. Livingstone", "S. Singh", "J. Sharma", "H. Brar", "H. Patel", "K. Rabada", "A. Singh"]
+};
+
+const USER_SQUAD = ["V. Kohli", "Y. Jaiswal", "A. Mhatre", "R. Pant", "T. David", "H. Pandya", "MS Dhoni", "K. Pandya", "Y. Chahal", "T. Boult", "K. Rabada"];
+
+let game = {
+    oppName: "",
+    oppSquad: [],
+    target: 0, score: 0, wickets: 0, balls: 0,
+    strikerIdx: 0,
+    batsmen: [USER_SQUAD[0], USER_SQUAD[1]],
+    playerStats: {},
+    currentBowler: "",
+    bowlerStats: {},
+};
+
+// Init UI
+const teamBox = document.getElementById('team-buttons');
+Object.keys(DATA).forEach(t => {
+    let b = document.createElement('button');
+    b.className = 'team-btn';
+    b.innerText = t;
+    b.onclick = () => startGame(t);
+    teamBox.appendChild(b);
+});
+
+function startGame(team) {
+    game.oppName = team;
+    game.oppSquad = DATA[team];
+    game.target = Math.floor(Math.random() * (250 - 150 + 1)) + 150; // Updated Range
+    
+    USER_SQUAD.forEach(p => game.playerStats[p] = {R:0, B:0, f4:0, f6:0, out: false});
+    game.oppSquad.forEach(p => game.bowlerStats[p] = {O:0, B:0, R:0, W:0});
+    
+    changeBowler();
+    document.getElementById('setup-screen').classList.add('hidden');
+    document.getElementById('game-container').classList.remove('hidden');
+    updateUI();
+}
+
+function changeBowler() {
+    const bowlers = game.oppSquad.slice(5);
+    game.currentBowler = bowlers[Math.floor(Math.random() * bowlers.length)];
+}
+
+function playBall(mode) {
+    if (!game.batsmen[game.strikerIdx]) return;
+
+    let outs, wts;
+    if (mode === 'S') {
+        outs = [0, 1, 2];
+        wts = [30, 50, 20];
+    } else {
+        outs = [0, 1, 2, 4, 6, "W"];
+        wts = [10, 10, 5, 25, 30, 10]; 
+    }
+    
+    const res = getRandom(outs, wts);
+    game.balls++;
+    let s = game.batsmen[game.strikerIdx];
+    let b = game.currentBowler;
+
+    game.playerStats[s].B++;
+    game.bowlerStats[b].B++;
+
+    if (res === "W") {
+        game.wickets++;
+        game.bowlerStats[b].W++;
+        game.playerStats[s].out = true;
+        updateBallCircle("W");
+        
+        if (game.wickets < 10) {
+            showSelection(); 
+            updateUI();
+            return; 
+        }
+    } else {
+        game.score += res;
+        game.playerStats[s].R += res;
+        game.bowlerStats[b].R += res;
+        if (res === 4) game.playerStats[s].f4++;
+        if (res === 6) game.playerStats[s].f6++;
+        if (res % 2 !== 0) game.strikerIdx = 1 - game.strikerIdx;
+        updateBallCircle(res);
+    }
+
+    if (game.balls % 6 === 0) {
+        game.strikerIdx = 1 - game.strikerIdx;
+        changeBowler();
+    }
+    
+    updateUI();
+    checkEnd();
+}
+
+function showSelection() {
+    document.getElementById('action-btns').classList.add('hidden');
+    const overlay = document.getElementById('selection-overlay');
+    const container = document.getElementById('available-players');
+    overlay.classList.remove('hidden');
+    container.innerHTML = "";
+
+    USER_SQUAD.forEach(p => {
+        const isBatting = game.batsmen.includes(p);
+        if (!game.playerStats[p].out && !isBatting) {
+            let b = document.createElement('button');
+            b.className = 'team-btn';
+            b.innerText = p;
+            b.onclick = () => selectPlayer(p);
+            container.appendChild(b);
+        }
+    });
+}
+
+function selectPlayer(name) {
+    game.batsmen[game.strikerIdx] = name;
+    document.getElementById('selection-overlay').classList.add('hidden');
+    document.getElementById('action-btns').classList.remove('hidden');
+    updateUI();
+}
+
+function updateUI() {
+    document.getElementById('target-val').innerText = game.target;
+    document.getElementById('runs').innerText = game.score;
+    document.getElementById('wickets').innerText = game.wickets;
+    document.getElementById('overs').innerText = `${Math.floor(game.balls/6)}.${game.balls%6}`;
+
+    let bLeft = 120 - game.balls;
+    let rNeeded = game.target - game.score;
+    document.getElementById('rrr-val').innerText = bLeft > 0 ? (rNeeded / (bLeft/6)).toFixed(2) : "0";
+    document.getElementById('crr-val').innerText = game.balls > 0 ? (game.score / (game.balls/6)).toFixed(2) : "0";
+
+    let p = 100 - ((rNeeded / (bLeft + 1)) * 10) - (game.wickets * 6);
+    p = Math.max(2, Math.min(98, Math.round(p)));
+    document.getElementById('prob-txt').innerText = p + "%";
+    document.getElementById('prob-fill').style.width = p + "%";
+
+    let bHtml = "";
+    game.batsmen.forEach((name, i) => {
+        let ps = game.playerStats[name];
+        bHtml += `<tr class="${game.strikerIdx === i ? 'striker-row' : ''}">
+            <td><span class="dot ${game.strikerIdx === i ? 'dot-green' : ''}"></span>${name}</td>
+            <td>${ps.R}</td><td>${ps.B}</td><td>${((ps.R/(ps.B||1))*100).toFixed(0)}</td>
+        </tr>`;
+    });
+    document.getElementById('batsmen-body').innerHTML = bHtml;
+
+    let bowl = game.bowlerStats[game.currentBowler];
+    document.getElementById('bowler-body').innerHTML = `<tr>
+        <td>${game.currentBowler}</td>
+        <td>${Math.floor(bowl.B/6)}.${bowl.B%6}</td>
+        <td>${bowl.R}</td><td>${bowl.W}</td>
+        <td>${(bowl.R / ((bowl.B||1)/6)).toFixed(2)}</td>
+    </tr>`;
+
+    let fHtml = "";
+    USER_SQUAD.forEach(p => {
+        let ps = game.playerStats[p];
+        fHtml += `<tr style="${ps.out ? 'opacity:0.5' : ''}"><td>${p} ${ps.out ? '(out)' : ''}</td><td>${ps.R}</td><td>${ps.B}</td><td>${ps.f4}</td><td>${ps.f6}</td></tr>`;
+    });
+    document.getElementById('full-scorecard').innerHTML = fHtml;
+}
+
+function updateBallCircle(res) {
+    const el = document.getElementById('last-ball');
+    el.innerText = res;
+    el.style.color = res === 'W' ? 'var(--agg-red)' : (res >= 4 ? 'var(--orange-strike)' : 'var(--text-primary)');
+    if(res === 'W') { el.style.borderColor = 'var(--agg-red)'; }
+    else { el.style.borderColor = 'var(--border)'; }
+}
+
+function checkEnd() {
+    let win = game.score >= game.target;
+    let loss = game.wickets >= 10 || game.balls >= 120;
+    if (win || loss) {
+        document.getElementById('action-btns').classList.add('hidden');
+        document.getElementById('selection-overlay').classList.add('hidden');
+        document.getElementById('result-overlay').classList.remove('hidden');
+        document.getElementById('result-msg').innerText = win ? "🏆 CHASE SUCCESSFUL!" : "💔 MATCH LOST BY " + (game.target - game.score) + " RUNS";
+        document.getElementById('result-msg').style.color = win ? "var(--safe-green)" : "var(--agg-red)";
+    }
+}
+
+function getRandom(items, weights) {
+    let total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    for (let i = 0; i < items.length; i++) {
+        if (r < weights[i]) return items[i];
+        r -= weights[i];
+    }
+}
+</script>
+</body>
+</html>

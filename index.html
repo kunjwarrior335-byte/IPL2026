@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPL 2024 Chase Simulator - Pro</title>
+    <title>IPL 2026 Chase Simulator - Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -15,7 +15,7 @@
             --agg-red: #ef4444;
             --accent-blue: #3b82f6;
             --orange-strike: #fb923c;
-            --border: #334155;       
+            --border: #334155;        
         }
 
         * { box-sizing: border-box; font-family: 'Roboto', sans-serif; margin: 0; padding: 0; }
@@ -32,7 +32,7 @@
 
         /* Game Layout */
         #game-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1100px; margin: 0 auto; }
-        .panel { background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); flex: 1; min-width: 350px; border: 1px solid var(--border); }
+        .panel { background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); flex: 1; min-width: 350px; border: 1px solid var(--border); position: relative; }
 
         /* Left Panel Stats */
         .header-stats { display: flex; justify-content: space-between; margin-bottom: 20px; text-align: center; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; }
@@ -63,11 +63,19 @@
         .btn { border: none; padding: 18px; border-radius: 10px; cursor: pointer; font-weight: 900; color: white; transition: 0.2s; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
         .btn-safe { background: var(--safe-green); box-shadow: 0 4px 0 #15803d; }
         .btn-agg { background: var(--agg-red); box-shadow: 0 4px 0 #b91c1c; }
+        .btn-secondary { background: #475569; box-shadow: 0 4px 0 #334155; }
         .btn:active { transform: translateY(2px); box-shadow: none; }
 
         .hidden { display: none !important; }
         #result-overlay { text-align: center; padding: 30px 20px; }
         #selection-overlay { text-align: center; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px dashed var(--accent-blue); margin-top: 15px; }
+
+        /* Modal specific styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-content { background: var(--bg-card); padding: 25px; border-radius: 12px; border: 1px solid var(--accent-blue); width: 90%; max-width: 750px; max-height: 85vh; overflow-y: auto; box-shadow: 0 15px 30px rgba(0,0,0,0.5); }
+        .close-btn { float: right; background: var(--agg-red); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .close-btn:hover { background: #b91c1c; }
+        .summary-banner { background: #0f172a; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 1.1rem; margin-bottom: 20px; color: var(--safe-green); border: 1px dashed var(--border);}
     </style>
 </head>
 <body>
@@ -77,6 +85,7 @@
         <h2>IPL CHASE SIMULATOR</h2>
         <p style="color: var(--text-secondary); margin-bottom: 20px;">Select Opponent to Start Chasing</p>
         <div id="team-buttons" class="team-grid"></div>
+        <button class="btn btn-secondary" style="width: 100%; margin-top: 25px; padding: 12px; font-size: 0.9rem;" onclick="openOverallStatsModal()">🏆 VIEW OVERALL CAREER STATS</button>
     </div>
 </div>
 
@@ -124,7 +133,10 @@
 
         <div id="result-overlay" class="hidden">
             <h1 id="result-msg"></h1>
-            <button class="btn" style="background: var(--accent-blue); margin-top:10px;" onclick="location.reload()">PLAY AGAIN</button>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                <button class="btn" style="background: var(--accent-blue);" onclick="location.reload()">PLAY AGAIN</button>
+                <button class="btn btn-secondary" onclick="openOverallStatsModal()">OVERALL STATS</button>
+            </div>
         </div>
     </div>
 
@@ -134,6 +146,37 @@
             <thead><tr><th>PLAYER</th><th>R</th><th>B</th><th>4s</th><th>6s</th></tr></thead>
             <tbody id="full-scorecard"></tbody>
         </table>
+        <button class="btn" style="background: var(--accent-blue); width: 100%; margin-top: 20px; padding: 12px; font-size: 0.85rem;" onclick="openStatsModal()">VIEW DETAILED MATCH STATS</button>
+    </div>
+</div>
+
+<div id="stats-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeModal('stats-modal')">X CLOSE</button>
+        <h2 style="color: var(--accent-blue); margin-bottom: 20px;">CURRENT MATCH STATS</h2>
+        <table>
+            <thead>
+                <tr><th>PLAYER</th><th>RUNS</th><th>BALLS</th><th>SR</th><th>AVG</th><th>4s</th><th>6s</th></tr>
+            </thead>
+            <tbody id="detailed-stats-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="overall-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeModal('overall-modal')">X CLOSE</button>
+        <h2 style="color: #eab308; margin-bottom: 15px;">🏆 OVERALL TOURNAMENT STATS</h2>
+        <div id="overall-wl" class="summary-banner"></div>
+        <table>
+            <thead>
+                <tr><th>PLAYER</th><th>RUNS</th><th>BALLS</th><th>SR</th><th>AVG</th><th>4s</th><th>6s</th></tr>
+            </thead>
+            <tbody id="overall-stats-body"></tbody>
+        </table>
+        <div style="text-align: center; margin-top: 20px;">
+            <button class="btn btn-secondary" style="font-size: 0.75rem; padding: 10px;" onclick="resetCareerStats()">⚠️ RESET ALL DATA</button>
+        </div>
     </div>
 </div>
 
@@ -162,7 +205,26 @@ let game = {
     playerStats: {},
     currentBowler: "",
     bowlerStats: {},
+    isFinished: false
 };
+
+// LOAD OR INITIALIZE CAREER STATS
+function loadCareerStats() {
+    let stats = JSON.parse(localStorage.getItem('iplChaseCareerStats'));
+    if (!stats) {
+        stats = { matches: 0, won: 0, lost: 0, players: {} };
+        USER_SQUAD.forEach(p => {
+            stats.players[p] = { R: 0, B: 0, f4: 0, f6: 0, outs: 0 };
+        });
+        localStorage.setItem('iplChaseCareerStats', JSON.stringify(stats));
+    }
+    // Safety check in case squad changed
+    USER_SQUAD.forEach(p => {
+        if(!stats.players[p]) stats.players[p] = { R: 0, B: 0, f4: 0, f6: 0, outs: 0 };
+    });
+    return stats;
+}
+let careerStats = loadCareerStats();
 
 // Init UI
 const teamBox = document.getElementById('team-buttons');
@@ -177,10 +239,11 @@ Object.keys(DATA).forEach(t => {
 function startGame(team) {
     game.oppName = team;
     game.oppSquad = DATA[team];
-    game.target = Math.floor(Math.random() * (250 - 150 + 1)) + 150; // Updated Range
+    game.target = Math.floor(Math.random() * (250 - 150 + 1)) + 150; 
     
     USER_SQUAD.forEach(p => game.playerStats[p] = {R:0, B:0, f4:0, f6:0, out: false});
     game.oppSquad.forEach(p => game.bowlerStats[p] = {O:0, B:0, R:0, W:0});
+    game.isFinished = false;
     
     changeBowler();
     document.getElementById('setup-screen').classList.add('hidden');
@@ -194,7 +257,7 @@ function changeBowler() {
 }
 
 function playBall(mode) {
-    if (!game.batsmen[game.strikerIdx]) return;
+    if (!game.batsmen[game.strikerIdx] || game.isFinished) return;
 
     let outs, wts;
     if (mode === 'S') {
@@ -219,7 +282,7 @@ function playBall(mode) {
         game.playerStats[s].out = true;
         updateBallCircle("W");
         
-        if (game.wickets < 10) {
+        if (game.wickets < 10 && game.balls < 120) {
             showSelection(); 
             updateUI();
             return; 
@@ -290,7 +353,7 @@ function updateUI() {
         let ps = game.playerStats[name];
         bHtml += `<tr class="${game.strikerIdx === i ? 'striker-row' : ''}">
             <td><span class="dot ${game.strikerIdx === i ? 'dot-green' : ''}"></span>${name}</td>
-            <td>${ps.R}</td><td>${ps.B}</td><td>${((ps.R/(ps.B||1))*100).toFixed(0)}</td>
+            <td>${ps.R}</td><td>${ps.B}</td><td>${ps.B > 0 ? ((ps.R/ps.B)*100).toFixed(0) : 0}</td>
         </tr>`;
     });
     document.getElementById('batsmen-body').innerHTML = bHtml;
@@ -300,13 +363,16 @@ function updateUI() {
         <td>${game.currentBowler}</td>
         <td>${Math.floor(bowl.B/6)}.${bowl.B%6}</td>
         <td>${bowl.R}</td><td>${bowl.W}</td>
-        <td>${(bowl.R / ((bowl.B||1)/6)).toFixed(2)}</td>
+        <td>${(bowl.B > 0 ? bowl.R / (bowl.B/6) : 0).toFixed(2)}</td>
     </tr>`;
 
     let fHtml = "";
     USER_SQUAD.forEach(p => {
         let ps = game.playerStats[p];
-        fHtml += `<tr style="${ps.out ? 'opacity:0.5' : ''}"><td>${p} ${ps.out ? '(out)' : ''}</td><td>${ps.R}</td><td>${ps.B}</td><td>${ps.f4}</td><td>${ps.f6}</td></tr>`;
+        fHtml += `<tr style="${ps.out ? 'opacity:0.5' : ''}">
+            <td>${p} ${ps.out ? '(out)' : (game.batsmen.includes(p) ? '*' : '')}</td>
+            <td>${ps.R}</td><td>${ps.B}</td><td>${ps.f4}</td><td>${ps.f6}</td>
+        </tr>`;
     });
     document.getElementById('full-scorecard').innerHTML = fHtml;
 }
@@ -322,12 +388,28 @@ function updateBallCircle(res) {
 function checkEnd() {
     let win = game.score >= game.target;
     let loss = game.wickets >= 10 || game.balls >= 120;
-    if (win || loss) {
+    if ((win || loss) && !game.isFinished) {
+        game.isFinished = true;
         document.getElementById('action-btns').classList.add('hidden');
         document.getElementById('selection-overlay').classList.add('hidden');
         document.getElementById('result-overlay').classList.remove('hidden');
         document.getElementById('result-msg').innerText = win ? "🏆 CHASE SUCCESSFUL!" : "💔 MATCH LOST BY " + (game.target - game.score) + " RUNS";
         document.getElementById('result-msg').style.color = win ? "var(--safe-green)" : "var(--agg-red)";
+        
+        // SAVE TO CAREER STATS
+        careerStats.matches++;
+        if (win) careerStats.won++; else careerStats.lost++;
+        
+        USER_SQUAD.forEach(p => {
+            let mPs = game.playerStats[p];
+            let cPs = careerStats.players[p];
+            cPs.R += mPs.R;
+            cPs.B += mPs.B;
+            cPs.f4 += mPs.f4;
+            cPs.f6 += mPs.f6;
+            if (mPs.out) cPs.outs++;
+        });
+        localStorage.setItem('iplChaseCareerStats', JSON.stringify(careerStats));
     }
 }
 
@@ -338,6 +420,72 @@ function getRandom(items, weights) {
         if (r < weights[i]) return items[i];
         r -= weights[i];
     }
+}
+
+// MATCH STATS MODAL
+function openStatsModal() {
+    let html = "";
+    USER_SQUAD.forEach(p => {
+        let ps = game.playerStats[p];
+        let sr = ps.B > 0 ? ((ps.R / ps.B) * 100).toFixed(2) : "0.00";
+        let avg = ps.out ? ps.R : "-"; 
+        
+        let statusMarker = "";
+        if (ps.out) statusMarker = "<span style='color: var(--agg-red); font-size: 0.75rem;'>(W)</span>";
+        else if (game.batsmen.includes(p) && ps.B > 0) statusMarker = "<span style='color: var(--safe-green); font-size: 0.75rem;'>*</span>";
+
+        html += `<tr style="${ps.out ? 'opacity:0.6;' : ''}">
+            <td style="font-weight: 700;">${p} ${statusMarker}</td>
+            <td style="color: var(--accent-blue); font-weight: 700;">${ps.R}</td>
+            <td>${ps.B}</td>
+            <td>${sr}</td>
+            <td>${avg}</td>
+            <td>${ps.f4}</td>
+            <td>${ps.f6}</td>
+        </tr>`;
+    });
+    document.getElementById('detailed-stats-body').innerHTML = html;
+    document.getElementById('stats-modal').classList.remove('hidden');
+}
+
+// CAREER OVERALL STATS MODAL
+function openOverallStatsModal() {
+    let html = "";
+    USER_SQUAD.forEach(p => {
+        let cPs = careerStats.players[p];
+        let sr = cPs.B > 0 ? ((cPs.R / cPs.B) * 100).toFixed(2) : "0.00";
+        // Career average: Runs divided by times out. If 0 times out but batted, avg is total runs. If never batted, avg is '-'
+        let avg = "-";
+        if (cPs.outs > 0) avg = (cPs.R / cPs.outs).toFixed(2);
+        else if (cPs.B > 0) avg = cPs.R + ".00";
+
+        html += `<tr>
+            <td style="font-weight: 700;">${p}</td>
+            <td style="color: #eab308; font-weight: 900;">${cPs.R}</td>
+            <td>${cPs.B}</td>
+            <td>${sr}</td>
+            <td style="font-weight: 700;">${avg}</td>
+            <td>${cPs.f4}</td>
+            <td>${cPs.f6}</td>
+        </tr>`;
+    });
+    
+    document.getElementById('overall-wl').innerHTML = `MATCHES PLAYED: <span style="color:white">${careerStats.matches}</span> &nbsp;|&nbsp; WON: <span style="color:white">${careerStats.won}</span> &nbsp;|&nbsp; LOST: <span style="color:white">${careerStats.lost}</span>`;
+    document.getElementById('overall-stats-body').innerHTML = html;
+    document.getElementById('overall-modal').classList.remove('hidden');
+}
+
+function resetCareerStats() {
+    if (confirm("Are you sure you want to erase all tournament history?")) {
+        localStorage.removeItem('iplChaseCareerStats');
+        careerStats = loadCareerStats();
+        closeModal('overall-modal');
+        alert("Career stats reset successfully!");
+    }
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.add('hidden');
 }
 </script>
 </body>
